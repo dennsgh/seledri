@@ -1,0 +1,47 @@
+{
+    "1700833471.710485": {
+        "task": "my_task",
+        "schedule_time": "2023-11-24T10:30:00",
+        "args": [
+            1,
+            2
+        ],
+        "kwargs": {}
+    },
+    "1700834356.870405": {
+        "task": "custom_module_task",
+        "schedule_time": "2023-11-25T10:30:00",
+        "args": [
+            "arg1",
+            "arg2"
+        ],
+        "kwargs": {}
+    },
+    "1700834856.903504": {
+        "task": "custom_task",
+        "schedule_time": "2023-11-25T10:30:00",
+        "args": [
+            "arg1",
+            "arg2"
+        ],
+        "kwargs": {}
+    },
+    "1700835075.896621": {
+        "task": "custom_task",
+        "schedule_time": "2023-11-25T10:30:00",
+        "args": [
+            "arg1",
+            "arg2"
+        ],
+        "kwargs": {}
+    },
+    "1700835153.671145": {
+        "task": "custom_task",
+        "schedule_time": "2023-11-25T10:30:00",
+        "args": [
+            "arg1",
+            "arg2"
+        ],
+        "kwargs": {}
+    }
+}
