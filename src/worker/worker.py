@@ -6,8 +6,10 @@ from scheduler.functionmap import FunctionMap
 logging.basicConfig(filename='worker_errors.log', level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class Worker:
-    def __init__(self, broker_url, function_map_file):
-        self.app = Celery('scheduler', broker=broker_url)
+    def __init__(self, function_map_file,broker,backend):
+        self.app = Celery('scheduler',
+                          broker=broker,
+                            backend=backend)
         self.function_map = FunctionMap(function_map_file)
 
     def register_task(self, identifier, *task_args, **task_kwargs):

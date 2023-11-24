@@ -1,3 +1,5 @@
 .env
-function_map.json
-jobs.json
+**.json**
+**__pycache__**
+.pyc
+.pytest_cache
