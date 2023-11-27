@@ -25,9 +25,6 @@ def main():
     worker.start_worker()
     scheduler = Timekeeper(Path('jobs.json'), worker)
 
-    # Initialize the scheduler
-
-
     # Schedule a task
     schedule_time = datetime.now() + timedelta(seconds=6)
     formatted_timestamp = schedule_time.strftime("%Y-%m-%d %H:%M:%S")  # Format the timestamp
