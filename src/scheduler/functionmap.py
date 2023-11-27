@@ -36,5 +36,5 @@ class FunctionMap:
     @staticmethod
     def deserialize_func(func_data):
         module_name, func_name = func_data
-        module = __import__(module_name, fromlist=[func_name])
+        module = __import__(module_name, globals(), locals(), [func_name], 0)
         return getattr(module, func_name)
