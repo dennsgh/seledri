@@ -1,4 +1,8 @@
+import inspect
 import logging
+import os
+import signal
+import subprocess
 from datetime import datetime
 from multiprocessing import Process
 from pathlib import Path
@@ -13,18 +17,28 @@ def start_celery_worker(app, num_workers):
     app.worker_main(argv)
 
 
+def start_flower(app, port=5555):
+    """
+    Starts Flower for Celery monitoring on the specified port.
+    """
+    broker_url = app.conf.broker_url
+    flower_command = ["flower", f"--broker={broker_url}", f"--port={port}"]
+    subprocess.Popen(flower_command)
+
+
 class Worker:
     def __init__(self, function_map_file: Path, broker: str, backend: str):
         self.app = Celery("scheduler", broker=broker, backend=backend)
         self.logger = logging.getLogger(__name__)
         self.function_map = FunctionMap(function_map_file)
+        self.logfile = Path(os.getenv("LOGS"), "worker.log")
         self.logger.info("Function Map OK")
         self.worker_processes = []
         # Configure logging
         self.logger.setLevel(logging.DEBUG)  # Set the logging level to DEBUG
 
         # Create a file handler and set its level to DEBUG
-        file_handler = logging.FileHandler("worker.log")
+        file_handler = logging.FileHandler(self.logfile)
         file_handler.setLevel(logging.DEBUG)
 
         # Create a console handler and set its level to DEBUG
@@ -45,6 +59,17 @@ class Worker:
         # Set up Celery logging to use the same logger
         self.app.log.get_default_logger = lambda: self.logger
 
+    def signal_handler(self, signum, frame):
+        """Gracefully shut down the worker and Flower processes."""
+        self.logger.info("Received shutdown signal, terminating processes...")
+        for process in self.worker_processes:
+            process.terminate()
+            process.join()
+        if self.flower_process:
+            self.flower_process.terminate()
+            self.flower_process.wait()
+        self.logger.info("All processes terminated.")
+
     def register_task(self, func, func_identifier, *task_args, **task_kwargs):
         def task_wrapper(*args, **kwargs):
             try:
@@ -58,29 +83,34 @@ class Worker:
         self.logger.info(f"Added function {func_identifier} {func}.")
         self.app.task(name=func_identifier)(task_wrapper)
 
-    def __schedule_task__(self, task_name: str, run_time: datetime, *args, **kwargs):
-        """
-        Schedules a task to be executed at a specific `run_time`.
-        """
+    def __schedule_task__(self, task_name: str, run_time: datetime, args, kwargs: dict):
         task = self.app.tasks.get(task_name)
         if task:
-            # Calculate the number of seconds from now until the run_time
             delay = (run_time - datetime.now()).total_seconds()
-            # Ensure we're not scheduling tasks in the past
             delay = max(delay, 0)
 
-            # Schedule the task
-            result = task.apply_async(args=args, kwargs=kwargs, countdown=delay)
+            # Inspect the task function and get its parameters
+            sig = inspect.signature(task.run)
+            param_names = [p.name for p in sig.parameters.values()]
+
+            # Convert args to kwargs based on the order in the task signature
+            args_to_kwargs = dict(zip(param_names, args))
+            all_kwargs = {**args_to_kwargs, **kwargs}
+
+            # Apply the task with keyword arguments
+            result = task.apply_async(kwargs=all_kwargs, countdown=delay)
             self.logger.debug(
-                f"Scheduled task '{task_name}' to run at {run_time} with ID {result.id}"
+                f"Scheduling task '{task_name}' to run at {run_time} with celery id {result.id}"
             )
             return result
         else:
             self.logger.error(f"Task '{task_name}' is not registered.")
 
     def start_worker(self, num_workers=1):
+        # Register the signal handler
+        signal.signal(signal.SIGINT, self.signal_handler)
         self.logger.debug(f"Starting {num_workers} Celery worker process(es)...")
-
+        start_flower(self.app, port=5555)
         # Create and start a process that runs the worker
         for _ in range(num_workers):
             # Pass the Celery app and the number of workers to the top-level function

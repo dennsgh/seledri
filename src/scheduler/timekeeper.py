@@ -1,7 +1,8 @@
 import hashlib
 import json
 import logging  # Import the logging module
-from datetime import datetime
+import os
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from worker.worker import Worker
@@ -12,13 +13,14 @@ class Timekeeper:
         self.persistence_file = persistence_file
         self.worker = worker_instance
         self.jobs = self.load_jobs()
-
+        self.logfile = Path(os.getenv("LOGS"), "schedule.logs")
         # Configure logging
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
         self._configure_logging()
-
-        # Re-schedule jobs that were persisted RUN ONCE
+        # Has to run before reregistering jobs ( to have celery know the actual tasks in the jobs )
+        self.reload_function_map()
+        # Re-schedule jobs that were persisted
         self.__reschedule_jobs__()
 
     def _configure_logging(self):
@@ -26,7 +28,7 @@ class Timekeeper:
         self.logger.setLevel(logging.DEBUG)
 
         # Create a file handler and set its level to DEBUG
-        file_handler = logging.FileHandler(".scheduler.log")
+        file_handler = logging.FileHandler(self.logfile)
         file_handler.setLevel(logging.DEBUG)
 
         # Create a console handler and set its level to DEBUG
@@ -56,21 +58,23 @@ class Timekeeper:
         with open(self.persistence_file, "w") as file:
             json.dump(self.jobs, file, indent=4)
 
-    def add_job(self, task_name: str, schedule_time: datetime, *args, **kwargs):
-        task_info = f"{task_name}{args}{kwargs}"
+    def compute_hash(self, task_name, *args, **kwargs):
+        return hashlib.sha256(str(f"{task_name}{args}{kwargs}").encode()).hexdigest()
 
+    def add_job(self, task_name: str, schedule_time: datetime, **kwargs):
         # Compute a hash of the concatenated string
-        task_hash = hashlib.sha256(task_info.encode()).hexdigest()
+        job_id = self.compute_hash(task_name, kwargs)
 
-        job_id = str(datetime.now().timestamp())
         self.jobs[job_id] = {
             "task": task_name,
+            "created": datetime.now().isoformat(),
             "schedule_time": schedule_time.isoformat(),
-            "task_identifier": task_hash,
-            "args": args,
             "kwargs": kwargs,
         }
         self.save_jobs()
+        self.logger.debug(
+            f"Received job {job_id} with task {task_name} to run at {schedule_time}"
+        )
         self.schedule_job_with_celery(job_id)
         return job_id
 
@@ -78,28 +82,68 @@ class Timekeeper:
         job_info = self.jobs[job_id]
         schedule_time = datetime.fromisoformat(job_info["schedule_time"])
         delay = (schedule_time - datetime.now()).total_seconds()
-        delay = max(delay, 0)  # Ensure delay is not negative
+        delay = max(delay, 0)
 
+        # Pass args and kwargs as expected by apply_async
         self.worker.__schedule_task__(
-            job_info["task"], schedule_time, *job_info["args"], **job_info["kwargs"]
+            job_info["task"],
+            schedule_time,
+            job_info.get("args", []),
+            job_info.get("kwargs", {}),
         )
-        self.logger.debug(f"Scheduled job {job_id} to run at {schedule_time}")
 
-    def __reschedule_jobs__(self):
-        # Deserialize and re-register the functions from the FunctionMap
+    def reload_function_map(self):
         for func_identifier, func_data in self.worker.function_map.function_map.items():
-            print(f"{func_identifier} {func_data}")
             func = self.worker.function_map.deserialize_func(func_data)
             self.worker.register_task(func, func_identifier)
+        self.logger.debug(f"Function map {self.worker.function_map.map_file} reloaded.")
+
+    def __reschedule_jobs__(self):
         self.logger.debug(f"Found {len(self.jobs)} scheduled.")
 
+        # Get the current time
+        now = datetime.now()
+        # Remove invalid and past jobs in the persistent file
+        self.prune()
         # Re-schedule jobs from the persistent file
         for job_id, job_info in self.jobs.items():
             schedule_time = datetime.fromisoformat(job_info["schedule_time"])
-            self.logger.debug(f"Scheduled job {job_id} to run at {schedule_time}")
+
+            # Check if the scheduled time is in the past
+            if schedule_time < now:
+                # Reschedule for a later time, for example, 10 seconds from now
+                schedule_time = now + timedelta(seconds=10)
+                self.logger.debug(
+                    f"Rescheduling job {job_id} to run at {schedule_time}"
+                )
+
+            self.logger.debug(f"Restored job {job_id} to run at {schedule_time}")
             self.worker.__schedule_task__(
-                job_info["task"], schedule_time, *job_info["args"], **job_info["kwargs"]
+                job_info["task"], schedule_time, **job_info["kwargs"]
             )
+
+    def prune(self):
+        # Get the current time
+        now = datetime.now()
+
+        # List to hold job_ids to be removed
+        jobs_to_remove = []
+
+        for job_id, job_info in self.jobs.items():
+            schedule_time = datetime.fromisoformat(job_info["schedule_time"])
+
+            # Check if the job is invalid or its schedule time is in the past
+            if schedule_time < now:
+                jobs_to_remove.append(job_id)
+
+        # Remove identified jobs
+        for job_id in jobs_to_remove:
+            del self.jobs[job_id]
+            self.logger.debug(f"Pruned job {job_id}")
+        if not len(jobs_to_remove):
+            self.logger.debug(f"All jobs valid with {len(self.jobs)} remaining.")
+        # Save the updated jobs list
+        self.save_jobs()
 
     def remove_job(self, job_id):
         if job_id in self.jobs:

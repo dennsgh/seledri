@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -11,7 +12,7 @@ from worker.worker import Worker
 logger = get_task_logger(__name__)
 
 
-@shared_task(name="print")
+@shared_task(name="print_task")
 def print_task(message):
     print(message)  # This will print to stdout of the worker process
     logger.info(f"Printing message: {message}")  # This will be logged
@@ -30,7 +31,7 @@ def main():
     worker.register_task(print_2, "print_2")  # Pass the function reference 'print'
 
     # Start the worker processes
-    scheduler = Timekeeper(Path("jobs.json"), worker)
+    scheduler = Timekeeper(Path(os.getenv("CONFIG"), "jobs.json"), worker)
 
     # Schedule a task
     schedule_time = datetime.now() + timedelta(seconds=6)
@@ -38,11 +39,12 @@ def main():
         "%Y-%m-%d %H:%M:%S"
     )  # Format the timestamp
     scheduler.add_job(
-        "print", schedule_time, args=(formatted_timestamp,)
-    )  # Pass the formatted timestamp as an argument
+        task_name="print_task", schedule_time=schedule_time, message=formatted_timestamp
+    )
+
     scheduler.add_job(
-        "print_2", schedule_time, args=(formatted_timestamp,)
-    )  # Pass the formatted timestamp as an argument
+        task_name="print_2", schedule_time=schedule_time, message=formatted_timestamp
+    )
 
     worker.start_worker()
 

@@ -13,6 +13,7 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
 fi
 
 export DATA="$WORKINGDIR/data"
+export LOGS="$WORKINGDIR/logs"
 
 export FRONTEND_SRC="$WORKINGDIR/frontend/src"
 export SRC="$WORKINGDIR/src"
@@ -34,4 +35,5 @@ fi
 $dotenv_command -f "$WORKINGDIR/.env" set WORKINGDIR "$WORKINGDIR"
 $dotenv_command -f "$WORKINGDIR/.env" set CONFIG "$CONFIG"
 $dotenv_command -f "$WORKINGDIR/.env" set DATA "$DATA"
+$dotenv_command -f "$WORKINGDIR/.env" set DATA "$LOGSA"
 $dotenv_command -f "$WORKINGDIR/.env" set PYTHONPATH "$PYTHONPATH"

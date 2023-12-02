@@ -26,6 +26,7 @@
   "terminal.integrated.env.linux": {
     "WORKINGDIR": "${workspaceRoot}",
     "CONFIG": "${workspaceRoot}/etc",
+    "LOGS": "${workspaceRoot}/logs",
     "DATA": "${workspaceRoot}/data",
     "PYTHONPATH": "${env:PYTHONPATH}:${workspaceRoot}/src"
   },
@@ -33,12 +34,14 @@
     "WORKINGDIR": "${workspaceRoot}",
     "CONFIG": "${workspaceRoot}\\etc",
     "DATA": "${workspaceRoot}\\data",
+    "LOGS": "${workspaceRoot}/logs",
     "PYTHONPATH": "${env:PYTHONPATH};${workspaceRoot}\\src"
   },
   "terminal.integrated.env.osx": {
     "WORKINGDIR": "${workspaceRoot}",
     "CONFIG": "${workspaceRoot}/etc",
     "DATA": "${workspaceRoot}/data",
+    "LOGS": "${workspaceRoot}/logs",
     "PYTHONPATH": "${env:PYTHONPATH}:${workspaceRoot}/src"
   }
 }
