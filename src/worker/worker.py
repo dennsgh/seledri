@@ -1,25 +1,26 @@
 import logging
 from datetime import datetime
 from multiprocessing import Process
+from pathlib import Path
 
 from celery import Celery
 
 from scheduler.functionmap import FunctionMap
 
+
 def start_celery_worker(app, num_workers):
-    argv = [
-        'worker',
-        '--loglevel=INFO',
-        f'--concurrency={num_workers}'
-    ]
+    argv = ["worker", "--loglevel=INFO", f"--concurrency={num_workers}"]
     app.worker_main(argv)
+
+
 class Worker:
-    def __init__(self, function_map_file, broker, backend):
+    def __init__(self, function_map_file: Path, broker: str, backend: str):
         self.app = Celery("scheduler", broker=broker, backend=backend)
+        self.logger = logging.getLogger(__name__)
         self.function_map = FunctionMap(function_map_file)
+        self.logger.info("Function Map OK")
         self.worker_processes = []
         # Configure logging
-        self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)  # Set the logging level to DEBUG
 
         # Create a file handler and set its level to DEBUG
@@ -50,14 +51,14 @@ class Worker:
                 # Use the passed function reference directly
                 return func(*args, **kwargs)
             except Exception as e:
-                logging.error(f"Error executing task '{func_identifier}': {e}")
+                self.logger.error(f"Error registering task '{func_identifier}': {e}")
 
         # Add the function reference to the FunctionMap
         self.function_map.add_function(func_identifier, func)
-
+        self.logger.info(f"Added function {func_identifier} {func}.")
         self.app.task(name=func_identifier)(task_wrapper)
-        
-    def __schedule_task__(self, task_name:str, run_time:datetime, *args, **kwargs):
+
+    def __schedule_task__(self, task_name: str, run_time: datetime, *args, **kwargs):
         """
         Schedules a task to be executed at a specific `run_time`.
         """
@@ -70,11 +71,13 @@ class Worker:
 
             # Schedule the task
             result = task.apply_async(args=args, kwargs=kwargs, countdown=delay)
-            self.logger.debug(f"Scheduled task '{task_name}' to run at {run_time} with ID {result.id}")
+            self.logger.debug(
+                f"Scheduled task '{task_name}' to run at {run_time} with ID {result.id}"
+            )
             return result
         else:
             self.logger.error(f"Task '{task_name}' is not registered.")
-            
+
     def start_worker(self, num_workers=1):
         self.logger.debug(f"Starting {num_workers} Celery worker process(es)...")
 
@@ -87,13 +90,11 @@ class Worker:
             self.logger.debug(f"Celery worker started with PID {process.pid}")
 
     def stop_worker(self):
-        self.logger.debug("Stopping Celery worker processes...")
+        self.logger.debug("Gracefully stopping Celery worker processes...")
         for process in self.worker_processes:
-            process.terminate()  # Terminate the process
-            process.join()       # Wait for the process to terminate
-            self.logger.debug(f"Celery worker with PID {process.pid} stopped.")
-        self.worker_processes = []  # Clear the list of worker processes
-
+            process.terminate()  # Ask processes to terminate
+            process.join()  # Wait for the process to terminate
+        self.logger.debug("Celery worker processes have been stopped.")
 
     def execute_task(self, task_name, *args, **kwargs):
         self.logger.debug(f"Executing task '{task_name}': {args} {kwargs}")
@@ -105,4 +106,3 @@ class Worker:
             return result  # Now you can use this result object elsewhere to check status or get results
         else:
             self.logger.error(f"Task '{task_name}' is not registered.")
-
