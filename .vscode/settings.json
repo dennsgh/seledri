@@ -34,7 +34,7 @@
     "WORKINGDIR": "${workspaceRoot}",
     "CONFIG": "${workspaceRoot}\\etc",
     "DATA": "${workspaceRoot}\\data",
-    "LOGS": "${workspaceRoot}/logs",
+    "LOGS": "${workspaceRoot}\\logs",
     "PYTHONPATH": "${env:PYTHONPATH};${workspaceRoot}\\src"
   },
   "terminal.integrated.env.osx": {

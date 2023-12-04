@@ -35,5 +35,5 @@ fi
 $dotenv_command -f "$WORKINGDIR/.env" set WORKINGDIR "$WORKINGDIR"
 $dotenv_command -f "$WORKINGDIR/.env" set CONFIG "$CONFIG"
 $dotenv_command -f "$WORKINGDIR/.env" set DATA "$DATA"
-$dotenv_command -f "$WORKINGDIR/.env" set DATA "$LOGSA"
+$dotenv_command -f "$WORKINGDIR/.env" set LOGS "$LOGS"
 $dotenv_command -f "$WORKINGDIR/.env" set PYTHONPATH "$PYTHONPATH"

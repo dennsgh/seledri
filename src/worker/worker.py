@@ -8,22 +8,25 @@ from multiprocessing import Process
 from pathlib import Path
 
 from celery import Celery
-
 from scheduler.functionmap import FunctionMap
 
-
-def start_celery_worker(app, num_workers):
-    argv = ["worker", "--loglevel=INFO", f"--concurrency={num_workers}"]
+def start_celery_worker(app :Celery, num_workers):
+    argv = ["worker", "--loglevel=INFO", f"--concurrency={num_workers}","-E"]
+    app.conf.worker_concurrency = num_workers
+    # Convert the path to a string and replace backslashes with forward slashes
+    app.conf.result_backend = "file:///" + str(Path(os.getenv("DATA"))).replace("\\","/")
+    app.conf.worker_redirect_stdouts = True
+    app.conf.worker_redirect_stdouts_level = "DEBUG"
     app.worker_main(argv)
-
+    
 
 def start_flower(app, port=5555):
     """
     Starts Flower for Celery monitoring on the specified port.
     """
     broker_url = app.conf.broker_url
-    flower_command = ["flower", f"--broker={broker_url}", f"--port={port}"]
-    subprocess.Popen(flower_command)
+    flower_command = ["python","-m","flower", f"--broker={broker_url}", f"--port={port}"]
+    return subprocess.Popen(flower_command)
 
 
 class Worker:
@@ -34,7 +37,10 @@ class Worker:
         self.logfile = Path(os.getenv("LOGS"), "worker.log")
         self.logger.info("Function Map OK")
         self.worker_processes = []
-        # Configure logging
+        self.flower_process = None
+        self.configure_logging()
+        
+    def configure_logging(self):
         self.logger.setLevel(logging.DEBUG)  # Set the logging level to DEBUG
 
         # Create a file handler and set its level to DEBUG
@@ -55,9 +61,9 @@ class Worker:
         # Add both handlers to the logger
         self.logger.addHandler(file_handler)
         self.logger.addHandler(console_handler)
-
-        # Set up Celery logging to use the same logger
         self.app.log.get_default_logger = lambda: self.logger
+        
+        # Set up Celery logging to use the same logger
 
     def signal_handler(self, signum, frame):
         """Gracefully shut down the worker and Flower processes."""
@@ -100,21 +106,21 @@ class Worker:
             # Apply the task with keyword arguments
             result = task.apply_async(kwargs=all_kwargs, countdown=delay)
             self.logger.debug(
-                f"Scheduling task '{task_name}' to run at {run_time} with celery id {result.id}"
+                f"Scheduling task '{task_name}' to run at {run_time}(delay={delay}) with celery id {result.id}"
             )
-            return result
+            return result  # This will return the actual result of the task
         else:
             self.logger.error(f"Task '{task_name}' is not registered.")
 
-    def start_worker(self, num_workers=1):
+    def start_worker(self, num_workers=2):
         # Register the signal handler
         signal.signal(signal.SIGINT, self.signal_handler)
         self.logger.debug(f"Starting {num_workers} Celery worker process(es)...")
-        start_flower(self.app, port=5555)
+        #start_flower(self.app, port=5555)
         # Create and start a process that runs the worker
         for _ in range(num_workers):
             # Pass the Celery app and the number of workers to the top-level function
-            process = Process(target=start_celery_worker, args=(self.app, num_workers))
+            process = Process(target=start_celery_worker, args=(self.app, num_workers),daemon=True)
             process.start()
             self.worker_processes.append(process)
             self.logger.debug(f"Celery worker started with PID {process.pid}")
@@ -130,9 +136,10 @@ class Worker:
         self.logger.debug(f"Executing task '{task_name}': {args} {kwargs}")
         task = self.app.tasks.get(task_name)
         if task:
-            # Execute the task immediately and asynchronously
-            result = task.apply_async(args=args, kwargs=kwargs)
-            self.logger.debug(f"Task '{task_name}' is registered with ID {result.id}")
-            return result  # Now you can use this result object elsewhere to check status or get results
+            # Execute the task immediately and synchronously for debugging
+            result = task.apply(args=args, kwargs=kwargs)
+            #self.logger.debug(f"Task '{task_name}' executed with return value {result.get()}")
+            return result.get()  # This will return the actual result of the task
         else:
             self.logger.error(f"Task '{task_name}' is not registered.")
+
