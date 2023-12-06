@@ -18,7 +18,7 @@ class Timekeeper:
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
         self._configure_logging()
-        # Has to run before reregistering jobs ( to have celery know the actual tasks in the jobs )
+        # Has to run before reregistering jobs
         self.reload_function_map()
         # Re-schedule jobs that were persisted
         self.__reschedule_jobs__()
