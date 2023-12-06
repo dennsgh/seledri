@@ -1,4 +1,5 @@
 # Seledri
+![Seledri Logo](/assets/seledri.png)
 
 ## Overview
 This project provides a robust task scheduling system, utilizing a `Worker` class for task execution and a `Timekeeper` class for managing task scheduling and lifecycle. It is designed to handle tasks efficiently, ensuring they are executed and cleaned up properly.
