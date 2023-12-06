@@ -94,7 +94,7 @@ class Timekeeper:
             **kwargs,
         }
         self.save_jobs()
-        self.logger.debug(f"Received job {job_id} with task {task_name} to run at {schedule_time}")
+        self.logger.info(f"Received job {job_id} with task {task_name} to run at {schedule_time}")
         self.schedule_job_to_worker(job_id)
         return job_id
 
@@ -110,6 +110,8 @@ class Timekeeper:
         self.worker.__schedule_task__(
             job_info["task"],
             schedule_time,
+            job_id,
+            self.remove_job,
             **job_info["kwargs"],
         )
 
@@ -133,11 +135,22 @@ class Timekeeper:
             schedule_time = datetime.fromisoformat(job_info["schedule_time"])
             if schedule_time < now:
                 schedule_time = now + timedelta(seconds=10)
-                self.logger.debug(f"Rescheduling job {job_id} to run at {schedule_time}")
+                self.logger.info(f"Rescheduling job {job_id} to run at {schedule_time}")
             self.worker.__schedule_task__(
                 job_info["task"], schedule_time, **job_info["kwargs"]
             )
+            
+    def remove_job(self, job_id:str) -> None:
+        """
+        Removes a job from the schedule.
 
+        Args:
+            job_id (str): The unique identifier of the job to remove.
+        """ 
+        self.jobs.pop(job_id)
+        self.save_jobs()
+        self.logger.info(f"Job {job_id} removed.")
+        
     def prune(self) -> None:
         """
         Removes jobs that are no longer valid or have passed their schedule time.
@@ -146,7 +159,7 @@ class Timekeeper:
         jobs_to_remove = [job_id for job_id, job_info in self.jobs.items() if datetime.fromisoformat(job_info["schedule_time"]) < now]
         for job_id in jobs_to_remove:
             del self.jobs[job_id]
-            self.logger.debug(f"Pruned job {job_id}")
+            self.logger.info(f"Pruned job {job_id}")
         self.save_jobs()
 
     def remove_job(self, job_id: str) -> None:
@@ -159,7 +172,7 @@ class Timekeeper:
         if job_id in self.jobs:
             del self.jobs[job_id]
             self.save_jobs()
-            self.logger.debug(f"Removed job {job_id}")
+            self.logger.info(f"Removed job {job_id}")
 
     def get_jobs(self) -> Dict[str, Any]:
         """

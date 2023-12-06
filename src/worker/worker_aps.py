@@ -51,33 +51,25 @@ class Worker:
         self.function_map.add_function(task_name, func)
         self.logger.info(f"Added function {task_name} {func}.")
 
-    def __schedule_task__(self, task_name: str, run_time: datetime, *args: Any, **kwargs: Any) -> None:
+    def __schedule_task__(self, task_name: str, run_time: datetime, job_id: str, _callback: Callable, *args: Any, **kwargs: Any) -> None:
         """
         Schedules a task to be run at a specified time.
 
         Args:
             task_name (str): The name of the task to schedule.
             run_time (datetime): The time at which the task should run.
+            job_id (str): The unique identifier of the job.
+            _callback(Callable): Callback function for remove job method under Timekeeper
             *args (Any): Positional arguments to pass to the task.
             **kwargs (Any): Keyword arguments to pass to the task.
         """
-        args = args if args is not None else ()
-        kwargs = kwargs if kwargs is not None else {}
-        task_func = self.function_map.get_function(task_name)
-        if task_func:
-            self.scheduler.add_job(
-                self.function_map.parse_and_call,
-                'date',
-                run_date=run_time,
-                kwargs={
-                    "func": task_func,
-                    "args": args,
-                    "kwargs": kwargs
-                }
-            )
-            self.logger.debug(f"Scheduled task '{task_name}' to run at {run_time}")
-        else:
-            self.logger.error(f"Task '{task_name}' is not registered.")
+        self.scheduler.add_job(
+            self.execute_task,
+            'date',
+            run_date=run_time,
+            args=(task_name, job_id, _callback,args,kwargs)
+        )
+        self.logger.debug(f"Scheduled task '{task_name}' to run at {run_time}")
 
     def start_worker(self) -> None:
         """
@@ -93,12 +85,14 @@ class Worker:
         self.scheduler.shutdown()
         self.logger.debug("APScheduler worker stopped.")
 
-    def execute_task(self, task_name: str, *args: Any, **kwargs: Any) -> Any:
+    def execute_task(self, task_name: str, job_id: str = None, _callback: Callable = None, *args: Any, **kwargs: Any) -> Any:
         """
-        Executes a registered task.
+        Executes a registered task and removes it from the schedule after execution.
 
         Args:
             task_name (str): The name of the task to execute.
+            job_id (str, optional): The unique identifier of the job.
+            _callback (Callable, optional): The callback function to remove the job.
             *args (Any): Positional arguments to pass to the task.
             **kwargs (Any): Keyword arguments to pass to the task.
 
@@ -106,9 +100,15 @@ class Worker:
             Any: The result of the task function, if any.
         """
         task_func = self.function_map.get_function(task_name)
+        result = "Task failed to execute"
         if task_func:
-            args = args if args is not None else ()
-            kwargs = kwargs if kwargs is not None else {}
-            return self.function_map.parse_and_call(task_func, *args, **kwargs)
+            # We need to ensure that 'args' is passed as a tuple and 'kwargs' as a dictionary
+            self.logger.info(f"Execute task '{task_name}'(id:{job_id}).")
+            result = self.function_map.parse_and_call(task_func, *args, **kwargs)
+            
         else:
             self.logger.error(f"Task '{task_name}' is not registered.")
+        if _callback and job_id:
+            _callback(job_id)  # Call the callback to remove the job
+        return result
+        

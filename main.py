@@ -34,7 +34,7 @@ def main():
     scheduler.add_job(
         task_name="print_2", schedule_time=schedule_time, kwargs={"message":"world"}
     )
-    worker.execute_task("print",("Timekeeper and Worker initialized.",),{}) # comma otherwise it won't be treated as tuple
+    worker.execute_task("print",args=("Timekeeper and Worker initialized.",),kwargs={}) # comma otherwise it won't be treated as tuple
     time.sleep(5)
     worker.stop_worker()
 

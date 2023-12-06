@@ -116,7 +116,13 @@ class FunctionMap:
         args = args if args is not None else ()
         kwargs = kwargs if kwargs is not None else {}
 
+        # Extract the argument names for the function
         arg_names = func.__code__.co_varnames[:func.__code__.co_argcount]
         args_dict = dict(zip(arg_names, args))
-        combined_kwargs = {**args_dict, **kwargs}
-        return func(**combined_kwargs)
+
+        # Check for overlapping keys and use values from kwargs if they exist
+        for key in args_dict:
+            if key not in kwargs:
+                kwargs[key] = args_dict[key]
+
+        return func(**kwargs)
