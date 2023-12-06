@@ -34,31 +34,51 @@ class Worker:
         # Add both handlers to the logger
         self.logger.addHandler(file_handler)
         self.logger.addHandler(console_handler)
+        
+    # Task name is func identifier
+    def register_task(self, func, task_name:str):
+        """Registers a function under a task name for the scheduler to recognize
+        
 
-    def register_task(self, func, func_identifier):
-        self.function_map.add_function(func_identifier, func)
-        self.logger.info(f"Added function {func_identifier} {func}.")
+        Args:
+            func (_type_): _description_
+            task_name (_type_): _description_
+        """        
+        self.function_map.add_function(task_name, func)
+        self.logger.info(f"Added function {task_name} {func}.")
 
-    def schedule_task(self, task_name: str, run_time: datetime, *args, **kwargs):
+    def __schedule_task__(self, task_name: str, run_time: datetime, *args, **kwargs):
+        args = args if args is not None else ()
+        kwargs = kwargs if kwargs is not None else {}
         task_func = self.function_map.get_function(task_name)
         if task_func:
-            self.scheduler.add_job(task_func, 'date', run_date=run_time, args=args, kwargs=kwargs)
+            self.scheduler.add_job(
+                self.function_map.parse_and_call, 
+                'date', 
+                run_date=run_time, 
+                kwargs={
+                    "func": task_func, 
+                    "args": args, 
+                    "kwargs": kwargs
+                }
+            )
             self.logger.debug(f"Scheduled task '{task_name}' to run at {run_time}")
         else:
             self.logger.error(f"Task '{task_name}' is not registered.")
 
     def start_worker(self):
         self.scheduler.start()
-        self.logger.debug("APScheduler started.")
+        self.logger.debug("APScheduler worker started.")
 
     def stop_worker(self):
         self.scheduler.shutdown()
-        self.logger.debug("APScheduler stopped.")
+        self.logger.debug("APScheduler worker stopped.")
 
     def execute_task(self, task_name, *args, **kwargs):
         task_func = self.function_map.get_function(task_name)
         if task_func:
-            self.logger.debug(f"Executing task '{task_name}': {args} {kwargs}")
-            return task_func(*args, **kwargs)
+            args = args if args is not None else ()
+            kwargs = kwargs if kwargs is not None else {}
+            return self.function_map.parse_and_call(task_func, *args, **kwargs)
         else:
             self.logger.error(f"Task '{task_name}' is not registered.")

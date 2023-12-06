@@ -5,7 +5,7 @@ import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from worker.worker import Worker
+from worker.worker_aps import Worker
 
 
 class Timekeeper:
@@ -69,16 +69,16 @@ class Timekeeper:
             "task": task_name,
             "created": datetime.now().isoformat(),
             "schedule_time": schedule_time.isoformat(),
-            "kwargs": kwargs,
+            **kwargs,
         }
         self.save_jobs()
         self.logger.debug(
             f"Received job {job_id} with task {task_name} to run at {schedule_time}"
         )
-        self.schedule_job_with_celery(job_id)
+        self.schedule_job_to_worker(job_id)
         return job_id
 
-    def schedule_job_with_celery(self, job_id):
+    def schedule_job_to_worker(self, job_id):
         job_info = self.jobs[job_id]
         schedule_time = datetime.fromisoformat(job_info["schedule_time"])
         delay = (schedule_time - datetime.now()).total_seconds()
@@ -88,8 +88,7 @@ class Timekeeper:
         self.worker.__schedule_task__(
             job_info["task"],
             schedule_time,
-            job_info.get("args", []),
-            job_info.get("kwargs", {}),
+            **job_info["kwargs"],
         )
 
     def reload_function_map(self):

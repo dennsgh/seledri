@@ -28,7 +28,7 @@ class FunctionMap:
     def get_function(self, identifier):
         if identifier in self.function_map:
             module_name, func_name = self.function_map[identifier]
-            module = __import__(module_name, globals(), locals()[func_name])
+            module = __import__(module_name, globals(), locals(),[func_name],0)
             return getattr(module, func_name)
         return None
 
@@ -52,3 +52,13 @@ class FunctionMap:
             return getattr(module, func_name)
         else:
             raise ValueError(f"Invalid function data format {func_data}")
+        
+    def parse_and_call(self, func, args, kwargs):
+        # Ensure args and kwargs are iterable and a dictionary, respectively
+        args = args if args is not None else ()
+        kwargs = kwargs if kwargs is not None else {}
+
+        arg_names = func.__code__.co_varnames[:func.__code__.co_argcount]
+        args_dict = dict(zip(arg_names, args))
+        combined_kwargs = {**args_dict, **kwargs}
+        return func(**combined_kwargs)
