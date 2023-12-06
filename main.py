@@ -18,7 +18,7 @@ def main():
         function_map_file=Path(os.getenv("CONFIG"),"function_map.json"),
     )
     worker.start_worker()
-    time.sleep(3)
+    time.sleep(1)
     # Registering the functions!
     worker.register_task(print_task, "print")  # Pass the function reference 'print'
     worker.register_task(print_2, "print_2")  # Pass the function reference 'print'
@@ -26,7 +26,7 @@ def main():
     # Start the worker processes
     scheduler = Timekeeper(Path(os.getenv("CONFIG"), "jobs.json"), worker)
     # Schedule a task
-    schedule_time = datetime.now() + timedelta(seconds=6)
+    schedule_time = datetime.now() + timedelta(seconds=3)
     scheduler.add_job(
         task_name="print", schedule_time=schedule_time, kwargs={"message":"hello"}
     )
@@ -35,7 +35,8 @@ def main():
         task_name="print_2", schedule_time=schedule_time, kwargs={"message":"world"}
     )
     worker.execute_task("print",("Timekeeper and Worker initialized.",),{}) # comma otherwise it won't be treated as tuple
-    time.sleep(10)
+    time.sleep(5)
+    worker.stop_worker()
 
 if __name__ == "__main__":
     main()
