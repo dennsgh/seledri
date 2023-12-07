@@ -1,0 +1,18 @@
+[project]
+name = "seledri_dennsgh"
+version = "0.0.1"
+authors = [
+  { name="dennis", email="denngohis@gmail.com" },
+]
+description = "Timekeeping and scheduling"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/dennsgh/seledri"
+Issues = "https://github.com/dennsgh/seledri/issues"

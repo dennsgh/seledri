@@ -7,20 +7,21 @@ from scheduler.functionmap import FunctionMap
 import os
 
 class Worker:
-    def __init__(self, function_map_file: Path,daemon=False):
+    def __init__(self, function_map_file: Path, daemon:bool = False, logfile:Path=None ,logger :logging.Logger = None):
         """
         Initializes the Worker class.
 
         Args:
             function_map_file (Path): Path to the file containing the function map.
         """
-        self.logger = logging.getLogger(__name__)
+        self.logger = logger or logging.getLogger(__name__)
         self.scheduler = BackgroundScheduler(daemon=daemon)
         self.function_map = FunctionMap(function_map_file)
-        self.logfile = Path(os.getenv("LOGS"), "worker.log")
+        self.logfile = logfile or Path(os.getenv("LOGS"), "worker.log")
         self.configure_logging()
         self.logger.info("Function Map OK")
-
+        self.logfile = logfile or Path(os.getenv("LOGS"), "worker.log")
+        
     def configure_logging(self) -> None:
         """
         Configures logging for the Worker class.

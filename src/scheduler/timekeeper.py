@@ -10,7 +10,7 @@ from worker.worker_aps import Worker
 
 
 class Timekeeper:
-    def __init__(self, persistence_file: Path, worker_instance: Worker):
+    def __init__(self, persistence_file: Path, worker_instance: Worker, logfile:Path = None ,logger :logging.Logger = None):
         """
         Initializes the Timekeeper class, responsible for managing and scheduling jobs.
 
@@ -18,11 +18,11 @@ class Timekeeper:
             persistence_file (Path): Path to the file used for persisting job data.
             worker_instance (Worker): An instance of the Worker class to execute scheduled tasks.
         """
+        self.logger = logger or logging.getLogger(__name__)
         self.persistence_file = persistence_file
         self.worker = worker_instance
         self.jobs = self.load_jobs()
-        self.logfile = Path(os.getenv("LOGS"), "schedule.logs")
-        self.logger = logging.getLogger(__name__)
+        self.logfile = logfile or Path(os.getenv("LOGS"), "schedule.logs")
         self._configure_logging()
         self.reload_function_map()
         self.__reschedule_jobs__()
