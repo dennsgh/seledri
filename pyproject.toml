@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools", "wheel","apscheduler"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "seledri"
-version = "0.1.0"
+version = "0.1.2"
 description = "Persistent and dynamic function scheduler"
 authors = [
     { name="dennis", email="denngohis@gmail.com" },
