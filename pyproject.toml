@@ -1,16 +1,13 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "seledri_dennsgh"
-version = "0.0.1"
+name = "seledri"
+version = "0.1.0"
+description = "Persistent and dynamic function scheduler"
 authors = [
-  { name="dennis", email="denngohis@gmail.com" },
-]
-description = "Timekeeping and scheduling"
-readme = "README.md"
-requires-python = ">=3.8"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: Apache License",
-    "Operating System :: OS Independent",
+    { name="dennis", email="denngohis@gmail.com" },
 ]
 
 [project.urls]
