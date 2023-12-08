@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from scheduler.functionmap import FunctionMap
+from seledri.functionmap import FunctionMap
 
 
 # Renamed test functions

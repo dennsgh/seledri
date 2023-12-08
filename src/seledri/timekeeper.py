@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict
 
-from worker.worker_aps import Worker
+from seledri.worker import Worker
 
 
 class Timekeeper:

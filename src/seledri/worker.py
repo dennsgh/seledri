@@ -3,7 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Any
 from apscheduler.schedulers.background import BackgroundScheduler
-from scheduler.functionmap import FunctionMap
+from seledri.functionmap import FunctionMap
 import os
 
 class Worker:
