@@ -10,7 +10,13 @@ from seledri.worker import Worker
 
 
 class Timekeeper:
-    def __init__(self, persistence_file: Path, worker_instance: Worker, logfile:Path = None ,logger :logging.Logger = None):
+    def __init__(
+        self,
+        persistence_file: Path,
+        worker_instance: Worker,
+        logfile: Path = None,
+        logger: logging.Logger = None,
+    ):
         """
         Initializes the Timekeeper class, responsible for managing and scheduling jobs.
 
@@ -143,7 +149,11 @@ class Timekeeper:
                 schedule_time = now + timedelta(seconds=10)
                 self.logger.info(f"Rescheduling job {job_id} to run at {schedule_time}")
             self.worker.__schedule_task__(
-                job_info["task"], schedule_time, **job_info["kwargs"]
+                job_info["task"],
+                schedule_time,
+                job_id,
+                self.remove_job,
+                **job_info["kwargs"],
             )
 
     def remove_job(self, job_id: str) -> None:
