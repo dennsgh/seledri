@@ -24,9 +24,16 @@ def main():
     # Start the worker processes
     scheduler = Timekeeper(Path(os.getenv("CONFIG"), "jobs.json"), worker)
     # Schedule a task
-    schedule_time = datetime.now() + timedelta(seconds=10)
     scheduler.add_job(
-        task_name="print", schedule_time=schedule_time, kwargs={"message": "hello"}
+        task_name="print",
+        schedule_time=datetime.now() + timedelta(seconds=50),
+        kwargs={"message": "hello"},
+    )
+
+    scheduler.add_job(
+        task_name="print",
+        schedule_time=datetime.now() + timedelta(seconds=50),
+        kwargs={"message": "hello"},
     )
 
     worker.execute_task(
